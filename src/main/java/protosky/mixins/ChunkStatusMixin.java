@@ -12,12 +12,12 @@ import net.minecraft.world.gen.chunk.ChunkGenerator;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import protosky.gen.WorldGenUtils;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
@@ -26,9 +26,9 @@ public abstract class ChunkStatusMixin
 {
     // LIGHT
     @Inject(method = "method_20613", at = @At("HEAD"))
-    private static void onLighting(ChunkStatus chunkStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager manager, ServerLightingProvider lightingProvider, Function function, List list, Chunk chunk, CallbackInfoReturnable info)
+    private static void onLighting(ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function function, List chunks, Chunk chunk, boolean bl, CallbackInfoReturnable<CompletableFuture> cir)
     {
-        if(!chunk.getStatus().isAtLeast(chunkStatus)) {
+        if(bl || !chunk.getStatus().isAtLeast(targetStatus)) {
             WorldGenUtils.deleteBlocks((ProtoChunk) chunk, world);
             if (new ChunkPos(world.getSpawnPos()).equals(chunk.getPos())) {
                 WorldGenUtils.genSpawnPlatform(chunk, world);
@@ -39,7 +39,7 @@ public abstract class ChunkStatusMixin
 
     // SPAWN -> populateEntities
     @Inject(method = "method_16566", at = @At("RETURN"))
-    private static void afterPopulation(ChunkStatus chunkStatus, ServerWorld world, ChunkGenerator generator, List list, Chunk chunk, CallbackInfo info) {
-        WorldGenUtils.clearEntities((ProtoChunk)chunk, world);
+    private static void afterPopulation(ChunkStatus chunkStatus, ServerWorld serverWorld, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function function, Chunk chunk, CallbackInfoReturnable<CompletableFuture> cir) {
+        WorldGenUtils.clearEntities((ProtoChunk)chunk, serverWorld);
     }
 }

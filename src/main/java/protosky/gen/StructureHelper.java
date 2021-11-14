@@ -3,9 +3,11 @@ package protosky.gen;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.class_6626;
 import net.minecraft.entity.boss.dragon.EnderDragonFight;
 import net.minecraft.structure.StrongholdGenerator;
 import net.minecraft.structure.StructurePiece;
+import net.minecraft.structure.StructurePiecesHolder;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
@@ -150,7 +152,7 @@ public class StructureHelper
             StructureStart stronghold = startChunk.getStructureStart(StructureFeature.STRONGHOLD);
             ChunkPos pos = chunk.getPos();
             BlockBox posBox = new BlockBox(pos.getStartX(), world.getBottomY(), pos.getStartZ(), pos.getEndX(), world.getTopY(), pos.getEndZ());
-            if (stronghold != null && stronghold.getIntersecting(posBox) != null)
+            if (stronghold != null && isIntersecting(stronghold, posBox))
             {
                 for (Object piece : stronghold.getChildren())
                 {
@@ -162,6 +164,17 @@ public class StructureHelper
                 }
             }
         }
+    }
+
+    private static boolean isIntersecting(StructureStart stronghold, BlockBox posBox) {
+        StructurePiecesHolder structurePiecesHolder = new class_6626();
+        if (stronghold != null) {
+            for (Object piece : stronghold.getChildren()) {
+                structurePiecesHolder.addPiece((StructurePiece) piece);
+            }
+            return structurePiecesHolder.getIntersecting(posBox) != null;
+        }
+        return false;
     }
 
     public static void generateStrongholdPortalRoom(ProtoChunk chunk, StrongholdGenerator.PortalRoom room, Random random)
