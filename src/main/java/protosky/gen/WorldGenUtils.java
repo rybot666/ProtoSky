@@ -89,7 +89,7 @@ public class WorldGenUtils
         if (s == null) return;
 
         ChunkPos chunkPos = chunk.getPos();
-        BlockPos blockPos = new BlockPos(chunkPos.x * 8, 64, chunkPos.z * 8);
+        BlockPos blockPos = new BlockPos(chunkPos.x * 16, 64, chunkPos.z * 16);
 
         StructurePlacementData structurePlacementData = new StructurePlacementData().setUpdateNeighbors(true);
         Random random = new Random();
