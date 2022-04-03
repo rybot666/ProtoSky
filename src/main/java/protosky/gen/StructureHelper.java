@@ -1,161 +1,79 @@
 package protosky.gen;
 
-import net.minecraft.block.*;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
+import net.minecraft.block.EndPortalFrameBlock;
 import net.minecraft.entity.boss.dragon.EnderDragonFight;
 import net.minecraft.structure.*;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.*;
-import net.minecraft.world.*;
+import net.minecraft.util.math.BlockBox;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.Direction;
+import net.minecraft.world.StructureWorldAccess;
+import net.minecraft.world.WorldAccess;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.ProtoChunk;
+import net.minecraft.world.gen.feature.ConfiguredStructureFeatures;
 import net.minecraft.world.gen.feature.EndSpikeFeature;
-import net.minecraft.world.gen.feature.StructureFeature;
 import protosky.mixins.StructurePieceAccessor;
-
-import java.util.Random;
 
 public class StructureHelper
 {
-    public static BlockPos getBlockInStructurePiece(StructurePiece piece, int x, int y, int z)
-    {
+    public static BlockPos getBlockInStructurePiece(StructurePiece piece, int x, int y, int z) {
         StructurePieceAccessor access = (StructurePieceAccessor) piece;
         return new BlockPos(access.invokeApplyXTransform(x, z), access.invokeApplyYTransform(y), access.invokeApplyZTransform(x, z));
     }
-    
-    public static BlockState getBlockAt(BlockView blockView, int x, int y, int z, StructurePiece piece)
-    {
-        StructurePieceAccessor access = (StructurePieceAccessor) piece;
-        int i = access.invokeApplyXTransform(x, z);
-        int j = access.invokeApplyYTransform(y);
-        int k = access.invokeApplyZTransform(x, z);
-        BlockPos blockPos = new BlockPos(i, j, k);
-        return !piece.getBoundingBox().contains(blockPos) ? Blocks.AIR.getDefaultState() : blockView.getBlockState(blockPos);
-    }
-    
-    public static void fillWithOutline(ProtoChunk chunk, int i, int j, int k, int l, int m, int n, BlockState blockState, BlockState inside, boolean bl, StructurePiece piece)
-    {
-        for (int o = j; o <= m; ++o)
-        {
-            for (int p = i; p <= l; ++p)
-            {
-                for (int q = k; q <= n; ++q)
-                {
-                    if (!bl || !getBlockAt(chunk, p, o, q, piece).isAir())
-                    {
-                        if (o != j && o != m && p != i && p != l && q != k && q != n)
-                        {
-                            setBlockInStructure(piece, chunk, inside, p, o, q);
-                        }
-                        else
-                        {
-                            setBlockInStructure(piece, chunk, blockState, p, o, q);
-                        }
-                    }
-                }
-            }
-        }
-        
-    }
-    
-    public static boolean addChest(ProtoChunk chunk, Random random, int x, int y, int z, Identifier lootTableId, /*@Nullable*/ BlockState block, StructurePiece piece)
-    {
-        StructurePieceAccessor access = (StructurePieceAccessor) piece;
-        BlockPos pos = new BlockPos(access.invokeApplyXTransform(x, z), access.invokeApplyYTransform(y), access.invokeApplyZTransform(x, z));
-        if (piece.getBoundingBox().contains(pos) && chunk.getBlockState(pos).getBlock() != Blocks.CHEST)
-        {
-            if (block == null)
-            {
-                block = StructurePiece.orientateChest(chunk, pos, Blocks.CHEST.getDefaultState());
-            }
-            
-            setBlockInChunk(chunk, pos, block);
-            BlockEntity blockEntity = chunk.getBlockEntity(pos);
-            if (blockEntity instanceof ChestBlockEntity)
-            {
-                ((ChestBlockEntity) blockEntity).setLootTable(lootTableId, random.nextLong());
-            }
-            
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    
-    public static void setBlockInStructure(StructurePiece piece, ProtoChunk chunk, BlockState state, int x, int y, int z)
-    {
+
+    public static void setBlockInStructure(StructurePiece piece, ProtoChunk chunk, BlockState state, int x, int y, int z) {
         StructurePieceAccessor access = (StructurePieceAccessor) piece;
         BlockPos pos = getBlockInStructurePiece(piece, x, y, z);
-        if (piece.getBoundingBox().contains(pos))
-        {
+
+        if (piece.getBoundingBox().contains(pos)) {
             BlockMirror mirror = access.getMirror();
-            if (mirror != BlockMirror.NONE)
+
+            if (mirror != BlockMirror.NONE) {
                 state = state.mirror(mirror);
+            }
+
             BlockRotation rotation = piece.getRotation();
-            if (rotation != BlockRotation.NONE)
+
+            if (rotation != BlockRotation.NONE) {
                 state = state.rotate(rotation);
-            
+            }
+
             setBlockInChunk(chunk, pos, state);
         }
     }
     
-    public static void setBlockInChunk(ProtoChunk chunk, BlockPos pos, BlockState state)
-    {
-        if (chunk.getPos().equals(new ChunkPos(pos)))
-        {
+    public static void setBlockInChunk(ProtoChunk chunk, BlockPos pos, BlockState state) {
+        if (chunk.getPos().equals(new ChunkPos(pos))) {
             chunk.setBlockState(pos, state, false);
         }
     }
 
-    public static void fillAirAndLiquidDownwards(ProtoChunk chunk, BlockState blockState, int x, int y, int z, StructurePiece piece)
-    {
-        StructurePieceAccessor access = (StructurePieceAccessor) piece;
-        int i = access.invokeApplyXTransform(x, z);
-        int j = access.invokeApplyYTransform(y);
-        int k = access.invokeApplyZTransform(x, z);
-        if (piece.getBoundingBox().contains(new BlockPos(i, j, k)))
-        {
-            while ((chunk.getBlockState(new BlockPos(i, j, k)).isAir() || chunk.getBlockState(new BlockPos(i, j, k)).getMaterial().isLiquid()) && j > 1)
-            {
-                setBlockInChunk(chunk, new BlockPos(i, j, k), blockState);
-                --j;
+    public static void generatePillars(ProtoChunk chunk, StructureWorldAccess world, EnderDragonFight fight) {
+        for (EndSpikeFeature.Spike spike : EndSpikeFeature.getSpikes(world)) {
+            if (spike.isInChunk(new BlockPos(spike.getCenterX(), 45, spike.getCenterZ()))) {
+                PillarHelper.generateSpike(chunk, spike);
             }
         }
     }
     
-    public static void generatePillars(ProtoChunk chunk, StructureWorldAccess world, EnderDragonFight fight)
-    {
-        for (EndSpikeFeature.Spike spike : EndSpikeFeature.getSpikes(world))
-        {
-            if (spike.isInChunk(new BlockPos(spike.getCenterX(), 45, spike.getCenterZ())))
-            {
-                PillarHelper.generateSpike(chunk, world, new Random(), spike, fight);
-            }
-        }
-    }
-    
-    public static void processStronghold(ProtoChunk chunk, WorldAccess world)
-    {
-        for (long startPosLong : chunk.getStructureReferences(StructureFeature.STRONGHOLD))
-        {
+    public static void processStronghold(ProtoChunk chunk, WorldAccess world) {
+        for (long startPosLong : chunk.getStructureReferences(ConfiguredStructureFeatures.STRONGHOLD.value())) {
             ChunkPos startPos = new ChunkPos(startPosLong);
             ProtoChunk startChunk = (ProtoChunk) world.getChunk(startPos.x, startPos.z, ChunkStatus.STRUCTURE_STARTS);
-            StructureStart stronghold = startChunk.getStructureStart(StructureFeature.STRONGHOLD);
+            StructureStart stronghold = startChunk.getStructureStart(ConfiguredStructureFeatures.STRONGHOLD.value());
+
             ChunkPos pos = chunk.getPos();
             BlockBox posBox = new BlockBox(pos.getStartX(), world.getBottomY(), pos.getStartZ(), pos.getEndX(), world.getTopY(), pos.getEndZ());
-            if (stronghold != null && isIntersecting(stronghold, posBox))
-            {
-                for (Object piece : stronghold.getChildren())
-                {
-                    if (((StructurePiece)piece).getBoundingBox().intersectsXZ(pos.getStartX(), pos.getStartZ(), pos.getEndX(), pos.getEndZ()))
-                    {
-                        if (piece instanceof StrongholdGenerator.PortalRoom)
-                            generateStrongholdPortalRoom(chunk, (StrongholdGenerator.PortalRoom) piece, new Random(startPosLong));
+
+            if (stronghold != null && isIntersecting(stronghold, posBox)) {
+                for (StructurePiece piece : stronghold.getChildren()) {
+                    if (piece.getBoundingBox().intersectsXZ(pos.getStartX(), pos.getStartZ(), pos.getEndX(), pos.getEndZ()) && piece instanceof StrongholdGenerator.PortalRoom) {
+                        generateStrongholdPortalRoom(chunk, (StrongholdGenerator.PortalRoom) piece);
                     }
                 }
             }
@@ -164,17 +82,19 @@ public class StructureHelper
 
     private static boolean isIntersecting(StructureStart stronghold, BlockBox posBox) {
         StructurePiecesHolder structurePiecesHolder = new StructurePiecesCollector();
+
         if (stronghold != null) {
-            for (Object piece : stronghold.getChildren()) {
-                structurePiecesHolder.addPiece((StructurePiece) piece);
+            for (StructurePiece piece : stronghold.getChildren()) {
+                structurePiecesHolder.addPiece(piece);
             }
+
             return structurePiecesHolder.getIntersecting(posBox) != null;
         }
+
         return false;
     }
 
-    public static void generateStrongholdPortalRoom(ProtoChunk chunk, StrongholdGenerator.PortalRoom room, Random random)
-    {
+    public static void generateStrongholdPortalRoom(ProtoChunk chunk, StrongholdGenerator.PortalRoom room) {
         BlockState northFrame = Blocks.END_PORTAL_FRAME.getDefaultState().with(EndPortalFrameBlock.FACING, Direction.NORTH);
         BlockState southFrame = Blocks.END_PORTAL_FRAME.getDefaultState().with(EndPortalFrameBlock.FACING, Direction.SOUTH);
         BlockState eastFrame = Blocks.END_PORTAL_FRAME.getDefaultState().with(EndPortalFrameBlock.FACING, Direction.EAST);

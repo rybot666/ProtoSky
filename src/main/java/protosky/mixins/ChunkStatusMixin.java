@@ -1,5 +1,7 @@
 package protosky.mixins;
 
+import com.mojang.datafixers.util.Either;
+import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.server.world.ServerLightingProvider;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureManager;
@@ -24,26 +26,21 @@ import java.util.function.Function;
 @Mixin(ChunkStatus.class)
 public abstract class ChunkStatusMixin
 {
+    // This is really not called 'onLighting' It's called 'GenerationTask'
     // LIGHT
+
     @Inject(method = "method_20614", at = @At("HEAD"))
-    //This is really not called 'onLighting' It's called 'GenerationTask'
-    private static void onLighting(ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function function, List chunks, Chunk chunk, boolean bl, CallbackInfoReturnable<CompletableFuture> cir)
+    private static void onLighting(ChunkStatus targetStatus, Executor executor, ServerWorld world, ChunkGenerator generator, StructureManager structureManager, ServerLightingProvider lightingProvider, Function<Chunk, CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> function, List<Chunk> chunks, Chunk chunk, boolean bl, CallbackInfoReturnable<CompletableFuture<Either<Chunk, ChunkHolder.Unloaded>>> cir)
     {
-        if(bl || !chunk.getStatus().isAtLeast(targetStatus)) {
-            WorldGenUtils.clearEntities((ProtoChunk)chunk, world);
+        if (bl || !chunk.getStatus().isAtLeast(targetStatus)) {
+            WorldGenUtils.clearEntities((ProtoChunk) chunk, world);
             WorldGenUtils.deleteBlocks((ProtoChunk) chunk, world);
+
             if (new ChunkPos(world.getSpawnPos()).equals(chunk.getPos())) {
                 WorldGenUtils.genSpawnPlatform(chunk, world);
             }
+
             Heightmap.populateHeightmaps(chunk, EnumSet.of(Heightmap.Type.MOTION_BLOCKING, Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, Heightmap.Type.OCEAN_FLOOR, Heightmap.Type.WORLD_SURFACE));
         }
     }
-
-    // SPAWN -> populateEntities
-    //This is really not called 'afterPopulation' It's called 'LoadTask'
-    //Also doesn't do anything.
-    /*@Inject(method = "method_16566", at = @At("RETURN"))
-    private static void afterPopulation(ChunkStatus chunkStatus, ServerWorld serverWorld, StructureManager structureManager, ServerLightingProvider serverLightingProvider, Function function, Chunk chunk, CallbackInfoReturnable<CompletableFuture> cir) {
-        WorldGenUtils.clearEntities((ProtoChunk)chunk, serverWorld);
-    }*/
 }

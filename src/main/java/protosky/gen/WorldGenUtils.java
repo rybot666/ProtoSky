@@ -12,6 +12,7 @@ import net.minecraft.util.collection.PackedIntegerArray;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.*;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.Chunk;
@@ -22,48 +23,46 @@ import protosky.mixins.ProtoChunkAccessor;
 
 import java.util.*;
 
-public class WorldGenUtils
-{
-    public static void deleteBlocks(ProtoChunk chunk, ServerWorld world)
-    {
+public class WorldGenUtils {
+    public static void deleteBlocks(ProtoChunk chunk, ServerWorld world) {
         ChunkSection[] sections = chunk.getSectionArray();
+
         for (int i = 0; i < sections.length; i++) {
             ChunkSection chunkSection = sections[i];
             PalettedContainer<BlockState> blockStateContainer = new PalettedContainer<>(Block.STATE_IDS, Blocks.AIR.getDefaultState(), PalettedContainer.PaletteProvider.BLOCK_STATE);
-            PalettedContainer<Biome> biomeContainer = chunkSection.getBiomeContainer();
+            PalettedContainer<RegistryEntry<Biome>> biomeContainer = chunkSection.getBiomeContainer();
+
             int chunkPos = chunkSection.getYOffset() >> 4;
             sections[i] = new ChunkSection(chunkPos, blockStateContainer, biomeContainer);
         }
-        for (BlockPos bePos : chunk.getBlockEntityPositions())
-        {
+
+        for (BlockPos bePos : chunk.getBlockEntityPositions()) {
             chunk.removeBlockEntity(bePos);
         }
+
         ((ProtoChunkAccessor) chunk).getLightSources().clear();
+
         // defined in Heightmap class constructor
         int elementBits = MathHelper.ceilLog2(chunk.getHeight() + 1);
         long[] emptyHeightmap = new PackedIntegerArray(elementBits, 256).getData();
-        for (Map.Entry<Heightmap.Type, Heightmap> heightmapEntry : chunk.getHeightmaps())
-        {
+
+        for (Map.Entry<Heightmap.Type, Heightmap> heightmapEntry : chunk.getHeightmaps()) {
             heightmapEntry.getValue().setTo(chunk, heightmapEntry.getKey(), emptyHeightmap);
         }
+
         StructureHelper.processStronghold(chunk, world);
 
-        if (world.getRegistryKey() == World.END)
+        if (world.getRegistryKey() == World.END) {
             StructureHelper.generatePillars(chunk, world, world.getEnderDragonFight());
+        }
     }
 
-
-    public static void clearEntities(ProtoChunk chunk, ServerWorldAccess world)
-    {
+    public static void clearEntities(ProtoChunk chunk, ServerWorldAccess world) {
         // erase entities
-        if (world.toServerWorld().getRegistryKey() != World.END)
-        {
+        if (world.toServerWorld().getRegistryKey() != World.END) {
             chunk.getEntities().clear();
-        }
-        else
-        {
-            chunk.getEntities().removeIf(tag ->
-            {
+        } else {
+            chunk.getEntities().removeIf(tag -> {
                 String id = tag.getString("id");
                 return !id.equals("minecraft:end_crystal") && !id.equals("minecraft:shulker") && !id.equals("minecraft:item_frame");
             });
@@ -77,15 +76,18 @@ public class WorldGenUtils
         // Get structure for this dimension
         if (world.getRegistryKey() == World.OVERWORLD) {
             Optional<Structure> op = man.getStructure(new Identifier("protosky:spawn_overworld"));
+
             if (op.isPresent()) {
                 s = op.get();
             }
         } else if (world.getRegistryKey() == World.NETHER) {
             Optional<Structure> op = man.getStructure(new Identifier("protosky:spawn_nether"));
+
             if (op.isPresent()) {
                 s = op.get();
             }
         }
+
         if (s == null) return;
 
         ChunkPos chunkPos = chunk.getPos();
@@ -94,6 +96,7 @@ public class WorldGenUtils
         StructurePlacementData structurePlacementData = new StructurePlacementData().setUpdateNeighbors(true);
         Random random = new Random();
         int flags = 0;
+
         s.place(world, blockPos, blockPos, structurePlacementData, random, flags);
         world.setSpawnPos(blockPos.add(s.getSize().getX() / 2, s.getSize().getY() + 1, s.getSize().getZ() / 2), 0);
     }
